@@ -28,7 +28,10 @@ Installation notes:
 
 Commands:
 
-   IRCNOTES HELP <command>
-   IRCNOTES SEARCH <string>
-   IRCNOTES ADD <nick|chan|thing> <comment>
-   IRCNOTES DEL <id>
+   IRCNOTES HELP \<command\>
+
+   IRCNOTES SEARCH \<string\>
+
+   IRCNOTES ADD \<nick|chan|thing\> \<comment\>
+
+   IRCNOTES DEL \<id\>
