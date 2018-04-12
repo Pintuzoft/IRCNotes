@@ -34,4 +34,7 @@ Commands:
 
    IRCNOTES ADD \<nick|chan|thing\> \<comment\>
 
-   IRCNOTES DEL \<id\>
+   IRCNOTES DEL \<id|last\>
+
+   IRCNOTES UPDATE \<id|last\> \<name\> \<note\>
+

@@ -31,7 +31,8 @@
 #   IRCNOTES HELP <command>
 #   IRCNOTES SEARCH <string>
 #   IRCNOTES ADD <nick|chan|thing> <note>
-#   IRCNOTES DEL <id>
+#   IRCNOTES DEL <id|last>
+#   IRCNOTES UPDATE <id|last> <name> <note>
 #
 # @File ircnotes.pl
 # @Author DreamHealer aka Pintuz
