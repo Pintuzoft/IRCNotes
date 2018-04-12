@@ -57,7 +57,7 @@ my $setting = new IRCNotesData (
 
 # Connect to the database.
 my $dbname = "ircnotes";
-my $dbhost = "localhost";
+my $dbhost = "10.0.1.41";
 my $dbuser = "ircnotes";
 my $dbpass = "ircnotes";
 my $dbh;
@@ -108,9 +108,10 @@ sub filterText {
                 printToWin ( $win, "Commands:" );
                 printToWin ( $win, "   %WHELP%n             - Shows this help information" );
                 printToWin ( $win, "   %WHELP <command>%n   - Shows help for a specific command" );
-                printToWin ( $win, "   %WSEARCH%n           - Search logs for name, text or date string" );
-                printToWin ( $win, "   %WADD%n              - Adds an event" );
-                printToWin ( $win, "   %WDEL%n              - Deletes an event" );
+                printToWin ( $win, "   %WSEARCH%n           - Search notes for name, text or date string" );
+                printToWin ( $win, "   %WADD%n              - Adds a note" );
+                printToWin ( $win, "   %WDEL%n              - Deletes a note" );
+                printToWin ( $win, "   %WUPDATE%n           - Updates a note" );
                 printToWin ( $win, "*** End ***" );
 
             } elsif ( uc $words[2] eq "HELP" ) {
@@ -137,6 +138,13 @@ sub filterText {
                 printToWin ( $win, "Syntax: %WIRCNOTES DEL <id>" );
                 printToWin ( $win, "Ex: ircnotes del 10" );
                 printToWin ( $win, "*** End ***" );
+                
+            } elsif ( uc $words[2] eq "UPDATE" ) {
+                printToWin ( $win, "*** HELP UPDATE ***" );
+                printToWin ( $win, "Syntax: %WIRCNOTES UPDATE <id|last>" );
+                printToWin ( $win, "Ex: ircnotes update 10 DreamHealer ~user\@some.leet.host was found flooding in #cocacola" );
+                printToWin ( $win, "    ircnotes update LAST DreamHealer ~user\@some.leet.host was found loading clones in #cocacola" );
+                printToWin ( $win, "*** End ***" );
             }
             Irssi::signal_stop ( );
 
@@ -156,7 +164,7 @@ sub filterText {
 
         } elsif ( uc $words[1] eq "ADD" ) {
             if ( ! defined $words[3] ) {
-                printToWin ( $win, "Syntax: %WIRCNOTES ADD <name> <comment>" );
+                printToWin ( $win, "Syntax: %WIRCNOTES ADD <name> <note>" );
 
             } else {
                 my $num = ( scalar @words ) - 1;
@@ -167,6 +175,31 @@ sub filterText {
                     printToWin ( $win, "Comment successfully saved!." );
                 } else {
                     printToWin ( $win, "Comment %WFAILED%n to be saved!." );
+                }
+            }
+            Irssi::signal_stop ( );
+
+        } elsif ( uc $words[1] eq "UPDATE" ) {
+            my $id;
+            
+            if ( ! defined $words[4] ) {
+                printToWin ( $win, "Syntax: %WIRCNOTES UPDATE <id|LAST> <name> <note>" );
+		
+	    } elsif ( ( $id = getUpdateID ( $words[2] ) ) == -1 ) {
+		printToWin ( $win, "Error: No such note found." );
+
+            } else {
+                my $num = ( scalar @words ) - 1;
+                my @cText = splice @words, 4, $num;
+                my $comment = join ' ', @cText;
+                my $res = doUpdate ( $id, $words[3], $comment );
+                
+                if ( $res eq -1 ) {
+                    printToWin ( $win, "Comment ".$words[2]." not found!." );
+                } elsif ( $res eq 1 ) {
+                    printToWin ( $win, "Comment successfully updated!." );
+                } else {
+                    printToWin ( $win, "Comment %WFAILED%n to be updated!." );
                 }
             }
             Irssi::signal_stop ( );
@@ -242,6 +275,93 @@ EOS
     return @logs;
 }
 
+sub getLastID {
+    my $sth;
+    my $id;
+    
+    my $query = << "EOS";
+select id
+from comment
+order by id desc
+limit 1
+EOS
+;
+
+    if ( dbconnect ( ) eq 1 ) {
+        eval {
+            $sth = $dbh->prepare ( $query ) or die "Cant prepare: ".$dbh->errstr;
+            $sth->execute ( ) or die "Cant execute: ".$dbh->errstr;
+            if ( my $note = $sth->fetchrow_hashref ( ) ) {
+                $id = $note->{id};
+            } else {
+                undef $id;
+            }
+        };
+
+        if ( $@ ) {
+            print STDERR "ERROR: $@\n";
+        } else {
+            $sth->finish ( );
+        }
+        dbdisconnect ( );
+    } else {
+        print ( "Error: no db connection found." );
+    }
+    
+    if ( ! defined $id ) {
+        return -1;
+    } else {
+        return $id;
+    }
+}
+
+# getUpdateID
+sub getUpdateID {
+    my ( $id ) = @_;
+    my $sth;
+    
+    if ( uc $id eq "LAST" ) {
+        return getLastID ( );
+    }
+
+    my $query = << "EOS";
+select id 
+from comment
+where
+id = ?
+EOS
+;
+
+    if ( dbconnect ( ) eq 1 ) {
+        eval { 
+            $sth = $dbh->prepare ( $query ) or die "Cant prepare: ".$dbh->errstr;
+            $sth->bind_param ( 1, $id );
+            $sth->execute ( ) or die "Cant execute: ".$dbh->errstr;
+            if ( my $note = $sth->fetchrow_hashref ( ) ) {
+                $id = $note->{id};
+            } else {
+                undef $id;
+            }
+        };
+
+        if ( $@ ) {
+            print STDERR "ERROR: $@\n";
+        } else {
+            $sth->finish ( );
+        }
+        dbdisconnect ( );
+
+    } else {
+        print ( "Error: no db connection found." );
+    }
+    
+    if ( ! defined $id ) {
+        return -1;
+    } else {
+        return $id;
+    }
+}
+
 # Add
 sub doAdd {
     my ( $name, $comment ) = @_;
@@ -258,6 +378,42 @@ EOS
             $sth = $dbh->prepare ( $query ) or die "Cant prepare: ".$dbh->errstr;
             $sth->bind_param ( 1, $name );
             $sth->bind_param ( 2, $comment );
+            $sth->execute ( ) or die "Cant execute: ".$dbh->errstr;
+        };
+
+        if ( $@ ) {
+            print STDERR "ERROR: $@\n";
+            dbdisconnect ( );
+            return 0;
+        } else {
+            $sth->finish ( );
+            dbdisconnect ( );
+            return 1;
+        }
+
+    } else {
+        print ( "Error: no db connection found." );
+        return 0;
+    }
+}
+
+# Update
+sub doUpdate {
+    my ( $id, $name, $comment ) = @_;
+    my $sth;
+    my $query = << "EOS";
+update comment 
+set name = ?, comment = ? 
+where id = ? 
+EOS
+;
+
+    if ( dbconnect ( ) eq 1 ) {
+        eval {
+            $sth = $dbh->prepare ( $query ) or die "Cant prepare: ".$dbh->errstr;
+            $sth->bind_param ( 1, $name );
+            $sth->bind_param ( 2, $comment );
+            $sth->bind_param ( 3, $id );
             $sth->execute ( ) or die "Cant execute: ".$dbh->errstr;
         };
 
