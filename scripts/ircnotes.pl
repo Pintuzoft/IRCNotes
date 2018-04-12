@@ -57,7 +57,7 @@ my $setting = new IRCNotesData (
 
 # Connect to the database.
 my $dbname = "ircnotes";
-my $dbhost = "10.0.1.41";
+my $dbhost = "localhost";
 my $dbuser = "ircnotes";
 my $dbpass = "ircnotes";
 my $dbh;
@@ -135,8 +135,9 @@ sub filterText {
 
             } elsif ( uc $words[2] eq "DEL" ) {
                 printToWin ( $win, "*** HELP DEL ***" );
-                printToWin ( $win, "Syntax: %WIRCNOTES DEL <id>" );
+                printToWin ( $win, "Syntax: %WIRCNOTES DEL <id|last>" );
                 printToWin ( $win, "Ex: ircnotes del 10" );
+                printToWin ( $win, "    ircnotes del last" );
                 printToWin ( $win, "*** End ***" );
                 
             } elsif ( uc $words[2] eq "UPDATE" ) {
@@ -183,9 +184,9 @@ sub filterText {
             my $id;
             
             if ( ! defined $words[4] ) {
-                printToWin ( $win, "Syntax: %WIRCNOTES UPDATE <id|LAST> <name> <note>" );
+                printToWin ( $win, "Syntax: %WIRCNOTES UPDATE <id|last> <name> <note>" );
 		
-	    } elsif ( ( $id = getUpdateID ( $words[2] ) ) == -1 ) {
+	    } elsif ( ( $id = getNoteID ( $words[2] ) ) == -1 ) {
 		printToWin ( $win, "Error: No such note found." );
 
             } else {
@@ -205,11 +206,20 @@ sub filterText {
             Irssi::signal_stop ( );
 
         } elsif ( uc $words[1] eq "DEL" ) {
+            my $id;
+            
             if ( ! defined $words[2] ) {
-                printToWin ( $win, "Syntax: %WIRCNOTES DEL <id>" );
+                printToWin ( $win, "Syntax: %WIRCNOTES DEL <id|last>" );
+	    
+            } elsif ( ( $id = getNoteID ( $words[2] ) ) == -1 ) {
+		printToWin ( $win, "Error: No such note found." );
 
             } else {
-                if ( doDel ( $words[2] ) eq 1 ) {
+                my $res = doDel ( $id );
+                
+                if ( $res eq -1 ) {
+                    printToWin ( $win, "Comment not found!." );
+                } elsif ( $res eq 1 ) {
                     printToWin ( $win, "Comment successfully removed!." );
                 } else {
                     printToWin ( $win, "Comment %WFAILED%n to be removed!." );
@@ -315,8 +325,8 @@ EOS
     }
 }
 
-# getUpdateID
-sub getUpdateID {
+# getNoteID
+sub getNoteID {
     my ( $id ) = @_;
     my $sth;
     
