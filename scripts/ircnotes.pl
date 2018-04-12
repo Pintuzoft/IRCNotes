@@ -30,7 +30,7 @@
 #
 #   IRCNOTES HELP <command>
 #   IRCNOTES SEARCH <string>
-#   IRCNOTES ADD <nick|chan|thing> <comment>
+#   IRCNOTES ADD <nick|chan|thing> <note>
 #   IRCNOTES DEL <id>
 #
 # @File ircnotes.pl
@@ -157,7 +157,7 @@ sub filterText {
                 my @logs = doSearch ( $words[2] );
                 printToWin ( $win, "*** SEARCH: ".$words[2]." ***" );
                 foreach my $log ( @logs ) {
-                    printToWin ( $win, "%W[".$log->{id}."]%n ".$log->{stamp}.": %W".$log->{name}."%n - ".$log->{comment} );
+                    printToWin ( $win, "%W[".$log->{id}."]%n ".$log->{stamp}.": %W".$log->{name}."%n - ".$log->{note} );
                 }
                 printToWin ( $win, "*** End ***" );
             }
@@ -170,12 +170,12 @@ sub filterText {
             } else {
                 my $num = ( scalar @words ) - 1;
                 my @cText = splice @words, 3, $num;
-                my $comment = join ' ', @cText;
+                my $note = join ' ', @cText;
 
-                if ( doAdd ( $words[2], $comment ) eq 1 ) {
-                    printToWin ( $win, "Comment successfully saved!." );
+                if ( doAdd ( $words[2], $note ) eq 1 ) {
+                    printToWin ( $win, "Note successfully saved!." );
                 } else {
-                    printToWin ( $win, "Comment %WFAILED%n to be saved!." );
+                    printToWin ( $win, "Note %WFAILED%n to be saved!." );
                 }
             }
             Irssi::signal_stop ( );
@@ -192,15 +192,15 @@ sub filterText {
             } else {
                 my $num = ( scalar @words ) - 1;
                 my @cText = splice @words, 4, $num;
-                my $comment = join ' ', @cText;
-                my $res = doUpdate ( $id, $words[3], $comment );
+                my $note = join ' ', @cText;
+                my $res = doUpdate ( $id, $words[3], $note );
                 
                 if ( $res eq -1 ) {
-                    printToWin ( $win, "Comment ".$words[2]." not found!." );
+                    printToWin ( $win, "Note ".$words[2]." not found!." );
                 } elsif ( $res eq 1 ) {
-                    printToWin ( $win, "Comment successfully updated!." );
+                    printToWin ( $win, "Note successfully updated!." );
                 } else {
-                    printToWin ( $win, "Comment %WFAILED%n to be updated!." );
+                    printToWin ( $win, "Note %WFAILED%n to be updated!." );
                 }
             }
             Irssi::signal_stop ( );
@@ -218,11 +218,11 @@ sub filterText {
                 my $res = doDel ( $id );
                 
                 if ( $res eq -1 ) {
-                    printToWin ( $win, "Comment not found!." );
+                    printToWin ( $win, "Note not found!." );
                 } elsif ( $res eq 1 ) {
-                    printToWin ( $win, "Comment successfully removed!." );
+                    printToWin ( $win, "Note successfully removed!." );
                 } else {
-                    printToWin ( $win, "Comment %WFAILED%n to be removed!." );
+                    printToWin ( $win, "Note %WFAILED%n to be removed!." );
                 }
             }
             Irssi::signal_stop ( );
@@ -249,11 +249,11 @@ sub doSearch {
     $word =~ s/\*/\%/g;
 
     my $query = << "EOS";
-select id, name, comment, stamp
-from comment
+select id, name, note, stamp
+from note
 where
 name like ?
-or ( comment like ?
+or ( note like ?
      or stamp like ? )
 order by stamp asc
 EOS
@@ -291,7 +291,7 @@ sub getLastID {
     
     my $query = << "EOS";
 select id
-from comment
+from note
 order by id desc
 limit 1
 EOS
@@ -336,7 +336,7 @@ sub getNoteID {
 
     my $query = << "EOS";
 select id 
-from comment
+from note
 where
 id = ?
 EOS
@@ -374,11 +374,11 @@ EOS
 
 # Add
 sub doAdd {
-    my ( $name, $comment ) = @_;
+    my ( $name, $note ) = @_;
     my $sth;
     my $query = << "EOS";
-insert into comment
-( name, comment, stamp )
+insert into note
+( name, note, stamp )
 values ( ?, ?, NOW() )
 EOS
 ;
@@ -387,7 +387,7 @@ EOS
         eval {
             $sth = $dbh->prepare ( $query ) or die "Cant prepare: ".$dbh->errstr;
             $sth->bind_param ( 1, $name );
-            $sth->bind_param ( 2, $comment );
+            $sth->bind_param ( 2, $note );
             $sth->execute ( ) or die "Cant execute: ".$dbh->errstr;
         };
 
@@ -409,11 +409,11 @@ EOS
 
 # Update
 sub doUpdate {
-    my ( $id, $name, $comment ) = @_;
+    my ( $id, $name, $note ) = @_;
     my $sth;
     my $query = << "EOS";
-update comment 
-set name = ?, comment = ? 
+update note 
+set name = ?, note = ? 
 where id = ? 
 EOS
 ;
@@ -422,7 +422,7 @@ EOS
         eval {
             $sth = $dbh->prepare ( $query ) or die "Cant prepare: ".$dbh->errstr;
             $sth->bind_param ( 1, $name );
-            $sth->bind_param ( 2, $comment );
+            $sth->bind_param ( 2, $note );
             $sth->bind_param ( 3, $id );
             $sth->execute ( ) or die "Cant execute: ".$dbh->errstr;
         };
@@ -453,7 +453,7 @@ sub doDel {
     }
 
     my $query = << "EOS";
-delete from comment
+delete from note
 where id = ?
 EOS
 ;
@@ -485,10 +485,10 @@ EOS
 sub init {
     my $sth;
     my $query = << "EOS";
-    CREATE TABLE comment (
+    CREATE TABLE note (
       id int(11) NOT NULL AUTO_INCREMENT,
       name varchar(32) DEFAULT NULL,
-      comment varchar(256) DEFAULT NULL,
+      note varchar(256) DEFAULT NULL,
       stamp datetime DEFAULT NULL,
       PRIMARY KEY (id)
     ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=latin1
@@ -521,7 +521,7 @@ EOS
 sub tablesExist {
     my $sth;
     my $query = << "EOS";
-    desc comment
+    desc note
 EOS
 ;
 
