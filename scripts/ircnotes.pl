@@ -49,7 +49,7 @@ my $setting = new IRCNotesData (
     authors     => 'DreamHealer',
     contact     => 'dreamhealer@avade.net',
     name        => 'ircnotes',
-    version     => '0.0.8',
+    version     => '0.0.9',
     description => 'This script will aid an user in keeping track of nick,chan ' .
                    'for later use ',
     license     => 'Public Domain',
