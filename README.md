@@ -10,7 +10,7 @@ Installation notes:
    Place files under ~/.irssi/scripts so it looks this way:
    
       ~/.irssi/scripts/ircnotes.pl
-      ~/1.irssi/scripts/ircnotes/ircnotesdata.pl
+      ~/.irssi/scripts/ircnotes/ircnotesdata.pl
 
    Create a database in your mysql server and grant privileges to it:
 
